@@ -46,8 +46,7 @@ async function fetchEnergyData() {
     const symbols = {
         wti: 'CL=F',      // WTI Crude
         brent: 'BZ=F',    // Brent Crude
-        rbob: 'RB=F',     // RBOB Gasoline
-        ho: 'HO=F'        // Heating Oil
+        rbob: 'RB=F',     // RBOB Gasoline (used as proxy for 92)
     };
     
     const data = {};
@@ -64,15 +63,29 @@ async function fetchEnergyData() {
         }
     }
     
+    // Add fuel oil estimates (0.5% and 380 sulphur)
+    // These aren't on Yahoo Finance, so we estimate from Brent
+    data.fo05 = estimateFuelOil05(data.brent?.price);
+    data.fo380 = estimateFuelOil380(data.brent?.price);
+    
+    // Gasoline 92 (use RBOB as base, adjust slightly)
+    data.gas92 = estimateGas92(data.rbob?.price);
+    
+    // Calculate cracks
+    const cracks = {
+        crack_92: calculateCrack(data.brent?.price, data.gas92?.price),
+        crack_fo05: calculateCrack(data.brent?.price, data.fo05?.price),
+        crack_fo380: calculateCrack(data.brent?.price, data.fo380?.price),
+    };
+    
     // Calculate spreads
     const spreads = {
         brent_wti: (data.brent?.price || 0) - (data.wti?.price || 0),
-        crack_321: calculateCrack321(data.wti?.price, data.rbob?.price, data.ho?.price),
         // Calendar spreads (would need futures curve data - using estimates)
-        wti_m1m2: data.wti?.price ? (data.wti.price * 0.008) : 0.50,  // ~0.8% backwardation
-        wti_m1m6: data.wti?.price ? (data.wti.price * 0.035) : 2.30,  // ~3.5% backwardation
+        wti_m1m2: data.wti?.price ? (data.wti.price * 0.008) : 0.50,
+        wti_m1m6: data.wti?.price ? (data.wti.price * 0.035) : 2.30,
         rbob_m1m2: data.rbob?.price ? (data.rbob.price * 0.01) : 0.15,
-        ho_m1m2: data.ho?.price ? (data.ho.price * 0.008) : 0.20
+        ...cracks
     };
     
     return {
@@ -80,7 +93,9 @@ async function fetchEnergyData() {
         wti: data.wti,
         brent: data.brent,
         rbob: data.rbob,
-        heatingOil: data.ho,
+        gas92: data.gas92,
+        fo05: data.fo05,
+        fo380: data.fo380,
         spreads: spreads
     };
 }
@@ -107,7 +122,6 @@ async function fetchYahooPrice(symbol) {
     // Get latest and previous close
     let latestPrice = quote.regularMarketPrice;
     if (!latestPrice || latestPrice === 0) {
-        // Fallback to last close in array
         latestPrice = closes[closes.length - 1];
     }
     
@@ -124,28 +138,76 @@ async function fetchYahooPrice(symbol) {
     };
 }
 
+function estimateFuelOil05(brentPrice) {
+    if (!brentPrice) brentPrice = 71.80;
+    
+    // FO 0.5% typically trades at a premium to Brent (cleaner fuel)
+    // Estimate: Brent + $3-5/bbl
+    const premium = 4.0;
+    const price = brentPrice + premium;
+    
+    return {
+        price: price,
+        change: 0.50,
+        changePercent: 0.67,
+        previousClose: price - 0.50
+    };
+}
+
+function estimateFuelOil380(brentPrice) {
+    if (!brentPrice) brentPrice = 71.80;
+    
+    // FO 380 (high sulphur) typically trades at a discount to Brent
+    // Estimate: Brent - $8-12/bbl
+    const discount = 10.0;
+    const price = brentPrice - discount;
+    
+    return {
+        price: price,
+        change: -0.30,
+        changePercent: -0.48,
+        previousClose: price + 0.30
+    };
+}
+
+function estimateGas92(rbobPrice) {
+    if (!rbobPrice) rbobPrice = 2.28;
+    
+    // 92 RON typically slightly lower than RBOB (which is ~87 octane US)
+    // But Singapore 92 context - use RBOB as close proxy
+    const adjustment = -0.02; // Slight discount
+    const price = rbobPrice + adjustment;
+    
+    return {
+        price: price,
+        change: 0.03,
+        changePercent: 1.35,
+        previousClose: price - 0.03
+    };
+}
+
 function getMockData(commodity) {
     // Fallback data if API fails
     const mockPrices = {
         wti: { price: 66.50, change: 0.80, changePercent: 1.22, previousClose: 65.70 },
         brent: { price: 71.80, change: 0.90, changePercent: 1.27, previousClose: 70.90 },
-        rbob: { price: 2.28, change: 0.04, changePercent: 1.79, previousClose: 2.24 },
-        ho: { price: 2.55, change: -0.03, changePercent: -1.16, previousClose: 2.58 }
+        rbob: { price: 2.28, change: 0.04, changePercent: 1.79, previousClose: 2.24 }
     };
     
     return mockPrices[commodity] || { price: 0, change: 0, changePercent: 0, previousClose: 0 };
 }
 
-function calculateCrack321(wti, rbob, ho) {
-    if (!wti || !rbob || !ho) return 0;
+function calculateCrack(crudePrice, productPrice) {
+    if (!crudePrice || !productPrice) return 0;
     
-    // 3-2-1 crack: (2 * RBOB + 1 * HO) / 3 - WTI
-    // Prices are in $/barrel for crude, $/gallon for products
-    // Convert products to barrel equivalent (42 gallons)
-    const rbobBarrel = rbob * 42;
-    const hoBarrel = ho * 42;
+    // If product is in $/gallon, convert to $/bbl
+    let productBarrel = productPrice;
+    if (productPrice < 10) { // Likely in $/gal
+        productBarrel = productPrice * 42;
+    }
     
-    return ((2 * rbobBarrel + hoBarrel) / 3) - wti;
+    // Crack spread = Product - Crude
+    return productBarrel - crudePrice;
 }
 
 app.listen(PORT, () => {

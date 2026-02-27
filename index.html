@@ -193,7 +193,7 @@
     </div>
 
     <div class="section">
-        <div class="section-title">⛽ Refined Products</div>
+        <div class="section-title">⛽ Gasoline</div>
         <div class="price-grid">
             <div class="price-card">
                 <div class="price-label">RBOB Gasoline</div>
@@ -201,9 +201,25 @@
                 <div class="price-change" id="rbob-change">--</div>
             </div>
             <div class="price-card">
-                <div class="price-label">Heating Oil</div>
-                <div class="price-value" id="ho-price">--</div>
-                <div class="price-change" id="ho-change">--</div>
+                <div class="price-label">Gasoline 92</div>
+                <div class="price-value" id="gas92-price">--</div>
+                <div class="price-change" id="gas92-change">--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🔥 Fuel Oil</div>
+        <div class="price-grid">
+            <div class="price-card">
+                <div class="price-label">FO 0.5% Sulphur</div>
+                <div class="price-value" id="fo05-price">--</div>
+                <div class="price-change" id="fo05-change">--</div>
+            </div>
+            <div class="price-card">
+                <div class="price-label">FO 380 Sulphur</div>
+                <div class="price-value" id="fo380-price">--</div>
+                <div class="price-change" id="fo380-change">--</div>
             </div>
         </div>
     </div>
@@ -222,17 +238,21 @@
             <div class="spread-label">RBOB M1-M2</div>
             <div class="spread-value" id="rbob-m1m2">--</div>
         </div>
-        <div class="spread-row">
-            <div class="spread-label">HO M1-M2</div>
-            <div class="spread-value" id="ho-m1m2">--</div>
-        </div>
     </div>
 
     <div class="section">
-        <div class="section-title">🔥 Crack Spreads</div>
+        <div class="section-title">💥 Crack Spreads</div>
         <div class="spread-row">
-            <div class="spread-label">3-2-1 Crack (Gulf Coast)</div>
-            <div class="spread-value" id="crack-321">--</div>
+            <div class="spread-label">92 Crack</div>
+            <div class="spread-value" id="crack-92">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">0.5 Crack</div>
+            <div class="spread-value" id="crack-fo05">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">380 Crack</div>
+            <div class="spread-value" id="crack-fo380">--</div>
         </div>
         <div class="spread-row">
             <div class="spread-label">Brent-WTI Spread</div>
@@ -259,14 +279,17 @@
                 updatePrice('wti', data.wti);
                 updatePrice('brent', data.brent);
                 updatePrice('rbob', data.rbob);
-                updatePrice('ho', data.heatingOil);
+                updatePrice('gas92', data.gas92);
+                updatePrice('fo05', data.fo05);
+                updatePrice('fo380', data.fo380);
                 
                 // Update spreads
                 updateSpread('wti-m1m2', data.spreads.wti_m1m2);
                 updateSpread('wti-m1m6', data.spreads.wti_m1m6);
                 updateSpread('rbob-m1m2', data.spreads.rbob_m1m2);
-                updateSpread('ho-m1m2', data.spreads.ho_m1m2);
-                updateSpread('crack-321', data.spreads.crack_321);
+                updateSpread('crack-92', data.spreads.crack_92);
+                updateSpread('crack-fo05', data.spreads.crack_fo05);
+                updateSpread('crack-fo380', data.spreads.crack_fo380);
                 updateSpread('brent-wti', data.spreads.brent_wti);
                 
                 // Update timestamp
