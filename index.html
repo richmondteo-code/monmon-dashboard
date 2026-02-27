@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MonMon Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #FFE5E5 0%, #FFF0F5 100%);
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            color: #D64B8A;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            color: #9B6B8F;
+            font-size: 14px;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #9B6B8F;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .refresh-btn {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 10px 24px;
+            background: #FFB3D9;
+            border: none;
+            border-radius: 8px;
+            color: #8B3A62;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(214, 75, 138, 0.2);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(214, 75, 138, 0.1);
+        }
+
+        .section-title {
+            color: #D64B8A;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #FFE5E5;
+            padding-bottom: 8px;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .price-card {
+            background: #FFF8FA;
+            border: 1px solid #FFE5E5;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .price-label {
+            color: #9B6B8F;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .price-value {
+            color: #D64B8A;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .price-change {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .price-change.positive {
+            color: #2E7D32;
+        }
+
+        .price-change.negative {
+            color: #C62828;
+        }
+
+        .spread-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #FFE5E5;
+        }
+
+        .spread-row:last-child {
+            border-bottom: none;
+        }
+
+        .spread-label {
+            color: #9B6B8F;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .spread-value {
+            color: #D64B8A;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .loading {
+            text-align: center;
+            color: #9B6B8F;
+            padding: 20px;
+        }
+
+        .error {
+            background: #FFEBEE;
+            border: 1px solid #FFCDD2;
+            border-radius: 8px;
+            padding: 12px;
+            color: #C62828;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .price-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💗 MonMon Dashboard</h1>
+        <div class="subtitle">Energy Markets at a Glance</div>
+    </div>
+
+    <div class="last-update" id="lastUpdate">Loading...</div>
+
+    <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+
+    <div id="error"></div>
+
+    <div class="section">
+        <div class="section-title">🛢️ Crude Oil</div>
+        <div class="price-grid">
+            <div class="price-card">
+                <div class="price-label">WTI Crude</div>
+                <div class="price-value" id="wti-price">--</div>
+                <div class="price-change" id="wti-change">--</div>
+            </div>
+            <div class="price-card">
+                <div class="price-label">Brent Crude</div>
+                <div class="price-value" id="brent-price">--</div>
+                <div class="price-change" id="brent-change">--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">⛽ Refined Products</div>
+        <div class="price-grid">
+            <div class="price-card">
+                <div class="price-label">RBOB Gasoline</div>
+                <div class="price-value" id="rbob-price">--</div>
+                <div class="price-change" id="rbob-change">--</div>
+            </div>
+            <div class="price-card">
+                <div class="price-label">Heating Oil</div>
+                <div class="price-value" id="ho-price">--</div>
+                <div class="price-change" id="ho-change">--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">📊 Calendar Spreads</div>
+        <div class="spread-row">
+            <div class="spread-label">WTI M1-M2</div>
+            <div class="spread-value" id="wti-m1m2">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">WTI M1-M6</div>
+            <div class="spread-value" id="wti-m1m6">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">RBOB M1-M2</div>
+            <div class="spread-value" id="rbob-m1m2">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">HO M1-M2</div>
+            <div class="spread-value" id="ho-m1m2">--</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🔥 Crack Spreads</div>
+        <div class="spread-row">
+            <div class="spread-label">3-2-1 Crack (Gulf Coast)</div>
+            <div class="spread-value" id="crack-321">--</div>
+        </div>
+        <div class="spread-row">
+            <div class="spread-label">Brent-WTI Spread</div>
+            <div class="spread-value" id="brent-wti">--</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            const errorDiv = document.getElementById('error');
+            errorDiv.innerHTML = '';
+            
+            try {
+                // Fetch data from backend API
+                const response = await fetch('/api/energy-data');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                
+                const data = await response.json();
+                
+                // Update prices
+                updatePrice('wti', data.wti);
+                updatePrice('brent', data.brent);
+                updatePrice('rbob', data.rbob);
+                updatePrice('ho', data.heatingOil);
+                
+                // Update spreads
+                updateSpread('wti-m1m2', data.spreads.wti_m1m2);
+                updateSpread('wti-m1m6', data.spreads.wti_m1m6);
+                updateSpread('rbob-m1m2', data.spreads.rbob_m1m2);
+                updateSpread('ho-m1m2', data.spreads.ho_m1m2);
+                updateSpread('crack-321', data.spreads.crack_321);
+                updateSpread('brent-wti', data.spreads.brent_wti);
+                
+                // Update timestamp
+                document.getElementById('lastUpdate').textContent = 
+                    `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+                    
+            } catch (error) {
+                console.error('Error loading data:', error);
+                errorDiv.innerHTML = `<div class="error">⚠️ Unable to load data. Please check your connection and try again.</div>`;
+            }
+        }
+        
+        function updatePrice(id, data) {
+            if (!data) return;
+            
+            document.getElementById(`${id}-price`).textContent = `$${data.price.toFixed(2)}`;
+            
+            const changeEl = document.getElementById(`${id}-change`);
+            const change = data.change || 0;
+            const changePercent = data.changePercent || 0;
+            
+            changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`;
+            changeEl.className = `price-change ${change >= 0 ? 'positive' : 'negative'}`;
+        }
+        
+        function updateSpread(id, value) {
+            if (value === undefined || value === null) return;
+            
+            const el = document.getElementById(id);
+            el.textContent = `$${value.toFixed(2)}`;
+            el.style.color = value >= 0 ? '#2E7D32' : '#C62828';
+        }
+        
+        // Load data on page load
+        loadData();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
